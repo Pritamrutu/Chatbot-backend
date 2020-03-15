@@ -9,12 +9,15 @@ from flask_jwt_extended import (create_access_token, create_refresh_token, jwt_r
 
 app = Flask(__name__)
 
-app.config['MYSQL_HOST'] = 'localhost'
+app.config['MYSQL_HOST'] = '127.0.0.1'
 app.config['MYSQL_USER'] = 'root'
 app.config['MYSQL_PASSWORD'] = 'Pritam'
 app.config['MYSQL_DB'] = 'chatbot'
 app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
 app.config['JWT_SECRET_KEY'] = 'secret'
+app.config['CORS_HEADERS'] = 'Content-Type'
+
+# cors = CORS(app, resources={r"/login: {"origins": "http://localhost:5000"}})
 
 mysql = MySQL(app)
 bcrypt = Bcrypt(app)
@@ -50,23 +53,29 @@ def register():
 
 @app.route('/chatbot/login', methods=['POST'])
 def login():
-    cur = mysql.connection.cursor()
-    Email = request.get_json()['Email']
-    Pass = request.get_json()['Pass']
-    result = ""
-	
-    cur.execute("SELECT * FROM Student where Email = '" + str(Email) + "'")
-    rv = cur.fetchone()
-    mysql.connection.commit()
-    cur.close()
-	
-    if bcrypt.check_password_hash(rv['Pass'], Pass):
-        access_token = create_access_token(identity = {'PRN': rv['PRN'],'UserName': rv['UserName'],'Email': rv['email']})
-        result = jsonify({"token":access_token})
-    else:
-        result = jsonify({"error":"Invalid username and password"})
-    
-    return result
+    try:
+        print("In Login")
+        cur = mysql.connection.cursor()
+        print("Connected")
+        Email = request.get_json()['Email']
+        Pass = request.get_json()['Pass']
+        result = ""
+        
+        cur.execute("SELECT * FROM Student where Email = '" + str(Email) + "'")
+        rv = cur.fetchone()
+        mysql.connection.commit()
+        cur.close()
+        
+        if bcrypt.check_password_hash(rv['Pass'], Pass):
+            access_token = create_access_token(identity = {'PRN': rv['PRN'],'UserName': rv['UserName'],'Email': rv['email']})
+            result = jsonify({"token":access_token})
+        else:
+            result = jsonify({"error":"Invalid username and password"})
+        
+        return result
+    except:
+        import traceback
+        print(traceback.format_exc())
 
 if __name__ == '__main__':
     app.run(debug=True)
